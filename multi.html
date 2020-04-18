@@ -3,7 +3,7 @@
 <head>
  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
  <title>multi party</title>
- <script src="//piyoking.mydns.jp/socket.io/socket.io.js"></script>
+ <script src="/socket.io/socket.io.js"></script>
  <script>
    function _assert(desc, v) {
      if (v) {
@@ -23,11 +23,21 @@
   &nbsp;
   <button type="button" onclick="connect();">Connect</button>
   <button type="button" onclick="hangUp();">Hang Up</button> 
+  <br>
+  <button type="button" onclick="OnMic();">mic On</button>
+  <button type="button" onclick="OffMic();">mute</button>
   <div>
     <video id="local_video" autoplay style="width: 160px; height: 120px; border: 1px solid black;"></video>
   </div>
   <div id="container">
   </div>
+  <form onsubmit="return sendmsg()">
+    <input type="text" id="msg"/>
+  </form>
+  <input type="button" value="send" onclick="sendmsg()"/>
+  <br>
+  <hr>
+  <div id="messages" style="border:1px solid rgb(171, 160, 160); width:400px;">
   <!--
   <p>SDP to send:<br />
     <textarea id="text_for_send_sdp" rows="5" cols="60" readonly="readonly">SDP to send</textarea>
@@ -158,6 +168,17 @@
       if (isConnectedWith(fromId)) {
         stopConnection(fromId);
       }
+    }
+    else if (message.type === 'chat') {
+      // --- got ICE candidate ---
+      console.log('Received Chat Message');
+      var parent = document.getElementById("messages");
+      var newele = document.createElement('div');
+      newele.style.cssText = "text-align: left;"
+      newele.innerHTML = message.data;
+      parent.insertBefore(newele, parent.children[0]);
+      //document.getElementById("messages").children[0] += "<div>" + message.data + "</div>";
+            console.log(message.data);
     }
   });
   socket.on('user disconnected', function(evt) {
@@ -321,12 +342,24 @@
     getDeviceStream({video: true, audio: true}) // audio: false <-- ontrack once, audio:true --> ontrack twice!!
     .then(function (stream) { // success
       localStream = stream;
+      localStream.getAudioTracks()[0].enabled = false;
       playVideo(localVideo, stream);
     }).catch(function (error) { // error
       console.error('getUserMedia error:', error);
       return;
     });
   }
+
+  function OnMic() {
+    if(localStream){
+      localStream.getAudioTracks()[0].enabled = true;
+    }
+  }
+  function OffMic() {
+    if(localStream){
+      localStream.getAudioTracks()[0].enabled = false;
+    }
+}
 
   // stop local video
   function stopVideo() {
@@ -443,7 +476,11 @@
 
   // ---------------------- connection handling -----------------------
   function prepareNewConnection(id) {
-    let pc_config = {"iceServers":[]};
+    let pc_config = {"iceServers":[
+    {"urls": "stun:stun.l.google.com:19302"},
+    {"urls": "stun:stun1.l.google.com:19302"},
+    {"urls": "stun:stun2.l.google.com:19302"}
+    ]};
     let peer = new RTCPeerConnection(pc_config);
 
     // --- on get remote stream ---
@@ -681,6 +718,21 @@
   // ---- multi party --
   function callMe() {
     emitRoom({type: 'call me'});
+  }
+
+  function sendmsg() {
+    let text = document.getElementById('msg').value;
+    document.getElementById('msg').value = "";
+    emitRoom({
+      type: 'chat',
+      data: text
+    });
+    var parent = document.getElementById("messages");
+      var newele = document.createElement('div');
+      newele.style.cssText = "text-align: right;"
+      newele.innerHTML = text;
+      parent.insertBefore(newele, parent.children[0]);
+    return false;
   }
 
 

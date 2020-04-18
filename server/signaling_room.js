@@ -50,6 +50,10 @@ io.on('connection', function(socket) {
       socket.join(roomname);
       console.log('id=' + socket.id + ' enter room=' + roomname);
       setRoomname(roomname);
+      emitMessage('message', {
+          type: 'chat',
+          data: 'enter room id=' + socket.id
+        })
     });
 
     function setRoomname(room) {
@@ -101,6 +105,10 @@ io.on('connection', function(socket) {
         console.log((new Date()) + ' Peer disconnected. id=' + socket.id);
 
         // --- emit ----
+        emitMessage('message', {
+          type: 'chat',
+          data: 'user disconnected id=' + socket.id
+        })
         emitMessage('user disconnected', {id: socket.id});
 
         // --- leave room --
